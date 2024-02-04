@@ -38,21 +38,18 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      - name: Extract Rust Channel
-        shell: bash
-        id: toolchain
-        run: |
-          version=$(grep -Eo 'channel = \"[0-9\.]+\"' rust-toolchain.toml | \
-          grep -Eo '[0-9\.]+')
-          echo "version=$version"
-          echo "version=$version" >> "$GITHUB_OUTPUT"
-
-      - name: Install toolchain
-        uses: dtolnay/rust-toolchain@stable
+      - name: Setup Rust
+        uses: ./.github/workflows/setup-rust.yaml
         with:
-          components: "clippy, rustfmt"
-          toolchain: ${{ steps.toolchain.outputs.version }}
-          targets: ${{ matrix.target }}
+          os: ${{ matrix.os }}
+          target: ${{ matrix.target }}
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Install clippy and rustfmt
+        shell: bash
+        run: |
+          rustup component add clippy
+          rustup component add rustfmt
 
       - name: Define prefix key and shared key
         id: cache-keys

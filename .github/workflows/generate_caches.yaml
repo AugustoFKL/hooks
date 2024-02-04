@@ -3,8 +3,6 @@ name: Generate Caches
 
 "on":
   push:
-    branches:
-      - master
 
 # Concurrency serves to prevent simultaneous execution of multiple identical
 # workflows in the same branch.
@@ -65,6 +63,7 @@ jobs:
       # If not, we should add a step to generate it.
       # TODO: Add a logic to delete old caches.
       - name: Cache dependencies
+        id: cache
         uses: Swatinem/rust-cache@v2
         with:
           prefix-key: ${{ steps.cache-keys.outputs.prefix-key }}
@@ -72,8 +71,12 @@ jobs:
           cache-targets: true
           cache-all-crates: true
 
+      - name: Print output for debugging
+        run: |
+          echo "${{ steps.cache.outputs.cache-hit }}"
+
       - name: Run check to generate clippy cache
-        if: ${{ steps.cache-keys.outputs.cache-hit }} == 'false'
+        if: ${{ steps.cache.outputs.cache-hit == false }}
         shell: bash
         run: |
           cargo check \
@@ -84,7 +87,7 @@ jobs:
           --target ${{ matrix.target }}
 
       - name: Run build to generate test and release cache
-        if: ${{ steps.cache-keys.outputs.cache-hit }} == 'false'
+        if: ${{ steps.cache.outputs.cache-hit == false }}
         shell: bash
         run: |
           cargo build \

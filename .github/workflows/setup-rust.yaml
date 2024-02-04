@@ -1,0 +1,55 @@
+---
+name: Setup Rust Environment
+on:
+  workflow_call:
+    inputs:
+      # The `OS` is required to guarantee the correct cache key.
+      os:
+        required: true
+        type: string
+      # Rust target. For example, "x86_64-unknown-linux-gnu".
+      target:
+        required: true
+        type: string
+    secrets:
+      token:
+        required: true
+
+jobs:
+  setup:
+    runs-on: ${{ inputs.os }}
+    outputs:
+      cache-hit: ${{ steps.cache-rust.outputs.cache-hit }}
+    steps:
+      - name: Extract Rust Channel
+        shell: bash
+        id: toolchain
+        run: |
+          version=$(grep -Eo 'channel = \"[0-9\.]+\"' rust-toolchain.toml | \
+          grep -Eo '[0-9\.]+')
+          echo "version=$version"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+
+      - name: Define shared key
+        id: cache-keys
+        shell: bash
+        run: |
+          os=${{ inputs.os }}
+          target=${{ inputs.target }}
+          toolchain=${{ steps.toolchain.outputs.version }}
+          echo "shared-key=$lock_hash" >> "$GITHUB_OUTPUT"
+
+      - name: Cache Rust installation
+        id: cache-rust
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/bin
+            ~/.rustup/toolchains
+          key: ${{ steps.cache-keys.outputs.shared-key }}
+
+      - name: Install toolchain
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: ${{ steps.toolchain.outputs.version }}
+          targets: ${{ matrix.target }}
